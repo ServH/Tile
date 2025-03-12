@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import RoomGenerator from '../generators/RoomGenerator';
+import RoomContentGenerator from '../generators/RoomContentGenerator';
 import Player from '../entities/Player';
 import gameConfig from '../config/gameConfig';
 
@@ -15,21 +16,28 @@ class GameScene extends Phaser.Scene {
         // Elementos del mapa
         this.walls = null;
         this.doors = null;
+        this.obstacles = null;
         this.doorSprites = [];
         this.exitSprites = [];
         
-        // Generador de habitaciones
+        // Generadores
         this.roomGenerator = null;
+        this.contentGenerator = null;
         this.dungeon = null;
+        
+        // Contenido actual
+        this.currentRoomContent = null;
     }
 
     create() {
-        // Crear grupos
+        // Crear grupos físicos
         this.walls = this.physics.add.staticGroup();
         this.doors = this.physics.add.staticGroup();
+        this.obstacles = this.physics.add.staticGroup();
         
-        // Inicializar generador
+        // Inicializar generadores
         this.roomGenerator = new RoomGenerator();
+        this.contentGenerator = new RoomContentGenerator();
         
         // Obtener dimensiones de la pantalla
         const { width, height } = this.cameras.main;
@@ -70,7 +78,17 @@ class GameScene extends Phaser.Scene {
         const room = this.dungeon.rooms[roomIndex];
         this.currentRoomIndex = roomIndex;
         
-        // Renderizar habitación
+        // Elegir estilo de habitación
+        const roomStyle = this.selectRoomStyle(roomIndex);
+        
+        // Generar contenido de la habitación
+        this.currentRoomContent = this.contentGenerator.generateRoomContent(
+            room, 
+            this.tileSize,
+            roomStyle
+        );
+        
+        // Renderizar habitación y su contenido
         this.renderRoom(room);
         
         // Actualizar contador de habitación en la UI
@@ -84,6 +102,7 @@ class GameScene extends Phaser.Scene {
         // Limpiar grupos
         if (this.walls) this.walls.clear(true, true);
         if (this.doors) this.doors.clear(true, true);
+        if (this.obstacles) this.obstacles.clear(true, true);
         
         // Limpiar sprites de puertas
         this.doorSprites.forEach(sprite => sprite.destroy());
@@ -92,13 +111,13 @@ class GameScene extends Phaser.Scene {
         // Limpiar sprites de salida
         this.exitSprites.forEach(sprite => sprite.destroy());
         this.exitSprites = [];
+        
+        // Resetear el contenido actual
+        this.currentRoomContent = null;
     }
     
     renderRoom(room) {
-        // Encontrar la puerta de salida
-        const exitDoor = room.doors.find(door => door.isExit);
-        
-        // Renderizar tiles
+        // Renderizar tiles básicos (paredes, suelo)
         for (let y = 0; y < room.height; y++) {
             for (let x = 0; x < room.width; x++) {
                 const tileType = room.layout[y][x];
@@ -149,17 +168,67 @@ class GameScene extends Phaser.Scene {
                             repeat: -1
                         });
                         
-                        // Asignar la posición de la puerta (NORTH, EAST, SOUTH, WEST)
+                        this.exitSprites.push(exitTile);
+                        
+                        // Asignar posición de puerta para la colisión
+                        const exitDoor = room.doors.find(d => d.isExit);
                         if (exitDoor) {
                             exitTile.doorPosition = exitDoor.position;
                         }
-                        
-                        this.exitSprites.push(exitTile);
                         
                         // Colisionador para la puerta
                         const exitCollider = this.physics.add.existing(exitTile, true);
                         this.doors.add(exitCollider);
                         break;
+                }
+            }
+        }
+        
+        // Renderizar contenido generado
+        if (this.currentRoomContent) {
+            this.renderRoomContent();
+        }
+    }
+    
+    renderRoomContent() {
+        for (let y = 0; y < this.currentRoomContent.length; y++) {
+            for (let x = 0; x < this.currentRoomContent[y].length; x++) {
+                const tile = this.currentRoomContent[y][x];
+                
+                // Si no hay tile o es suelo normal, continuar
+                if (tile === null || (tile.id === 'floor' && !tile.isPath)) {
+                    continue;
+                }
+                
+                const pixelX = x * this.tileSize;
+                const pixelY = y * this.tileSize;
+                
+                // Renderizar según tipo
+                if (tile.id !== 'floor') {
+                    // Crear sprite para el obstáculo
+                    const obstacle = this.add.rectangle(
+                        pixelX + this.tileSize / 2,
+                        pixelY + this.tileSize / 2,
+                        this.tileSize,
+                        this.tileSize,
+                        tile.color
+                    );
+                    
+                    // Solo añadir física para obstáculos no caminables
+                    if (!tile.walkable) {
+                        this.obstacles.add(this.physics.add.existing(obstacle, true));
+                    }
+                }
+                // Opcionalmente, visualizar el camino garantizado para debugging
+                else if (tile.isPath && gameConfig.gameplay.debugPath) {
+                    this.add.rectangle(
+                        pixelX + this.tileSize / 2,
+                        pixelY + this.tileSize / 2,
+                        this.tileSize / 2,
+                        this.tileSize / 2,
+                        0x00ff00,
+                        0.3
+                    );
                 }
             }
         }
@@ -176,6 +245,7 @@ class GameScene extends Phaser.Scene {
         
         // Configurar colisiones
         this.physics.add.collider(this.player, this.walls);
+        this.physics.add.collider(this.player, this.obstacles);
     }
     
     checkDoorCollisions() {
@@ -275,6 +345,28 @@ class GameScene extends Phaser.Scene {
         
         // Posicionar jugador
         this.player.setPosition(x, y);
+    }
+    
+    /**
+     * Selecciona un estilo de habitación basado en el índice
+     */
+    selectRoomStyle(roomIndex) {
+        // Estilos disponibles
+        const styles = Object.keys(this.contentGenerator.config.roomStyles);
+        
+        // Distribuir estilos basados en un patrón
+        if (roomIndex === 0) {
+            // Primera habitación siempre standard
+            return 'standard';
+        } else if (roomIndex === this.dungeon.rooms.length - 1) {
+            // Última habitación volcanic
+            return 'volcanic';
+        } else {
+            // Para el resto, distribuir cíclicamente
+            const styleIndex = (roomIndex - 1) % (styles.length - 1);
+            const style = styles[styleIndex + 1]; // +1 para saltar 'standard'
+            return style;
+        }
     }
 }
 

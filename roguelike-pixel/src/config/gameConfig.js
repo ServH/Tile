@@ -34,7 +34,8 @@ const gameConfig = {
         startingHealth: 100,
         tileSize: 16,
         fogOfWar: true,
-        viewDistance: 8
+        viewDistance: 8,
+        debugPath: false  // Activa para ver los caminos garantizados
     },
     
     // Renderizado

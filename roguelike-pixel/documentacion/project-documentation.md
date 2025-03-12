@@ -33,6 +33,161 @@ Todo parámetro ajustable está centralizado en archivos de configuración:
 - **levelConfig.js**: Generación procedural de niveles
 - **uiConfig.js**: Estilos y configuración de la interfaz
 - **enemyConfig.js**: Configuración de enemigos
+- **roomContentConfig.js**: Configuración para obstáculos y estilos de habitaciones
+
+### 2. Generación Procedural de Habitaciones
+
+El sistema de generación de habitaciones al estilo Binding of Isaac:
+
+- Las habitaciones ocupan toda la pantalla
+- Puertas de 3 tiles de ancho para facilitar la navegación
+- Transiciones fluidas entre habitaciones
+- Conexión lineal de habitaciones
+- Puertas de entrada (cian) y salida (rosa) bien diferenciadas
+- Soporte para un total de 10 habitaciones
+
+### 3. Generación de Contenido en Habitaciones
+
+Cada habitación posee contenido proceduralmente generado:
+
+- **Algoritmo de pathfinding**: Garantiza un camino viable desde el centro hasta la salida
+- **Obstáculos variados**: Agua, lava, cajas, barriles, rocas, arbustos
+- **Estilos de habitación**: Standard, Flooded, Volcanic, Forest con diferentes tipos de obstáculos
+- **Distribución balanceada**: Garantiza densidad adecuada sin bloquear el paso
+- **Clustering**: Genera agrupaciones naturales de obstáculos
+
+```javascript
+// Ejemplo de uso de los generadores
+const roomGenerator = new RoomGenerator();
+const contentGenerator = new RoomContentGenerator();
+
+// Generar estructura de habitaciones
+const dungeon = roomGenerator.generateDungeon(width, height);
+
+// Generar contenido para una habitación específica
+const roomContent = contentGenerator.generateRoomContent(room, tileSize, 'volcanic');
+```
+
+### 4. Entidades del Juego
+
+#### Jugador
+
+- Movimiento con WASD o flechas
+- Sistema de dash con espacio
+- Invulnerabilidad temporal al recibir daño
+- Sistema de colisión con obstáculos y puertas
+
+### 5. Interfaz de Usuario
+
+La UI está completamente separada de la lógica del juego:
+
+- Escena UIScene superpuesta al juego
+- Comunicación mediante eventos
+- Contador de habitaciones (X/10)
+- Componentes modulares (HealthBar)
+- Estilos centralizados en uiConfig
+
+### 6. Sistema de Transiciones
+
+- Detección de colisión con puertas de salida
+- Efecto de fade entre habitaciones
+- Posicionamiento inteligente del jugador al entrar en una nueva habitación
+- Prevención de movimiento durante la transición (`isTransitioning`)
+
+## Flujo del Juego
+
+1. El jugador comienza en la primera habitación
+2. Navega por los obstáculos proceduralmente generados
+3. Encuentra y toca la puerta de salida (rosa brillante)
+4. Transición a la siguiente habitación con un estilo diferente
+5. El objetivo es llegar a la última habitación (10/10)
+
+## Aspectos Técnicos
+
+### Tecnologías Utilizadas
+
+- **Phaser 3**: Framework de juegos HTML5
+- **ES6+**: JavaScript moderno
+- **Webpack**: Bundling y servidor de desarrollo
+- **NPM**: Gestión de dependencias
+
+### Algoritmos Implementados
+
+- **Generación procedural**: Creación de habitaciones conectadas
+- **A* Pathfinding**: Garantizar caminos viables entre puntos
+- **Distribución pseudoaleatoria**: Ubicación balanceada de obstáculos
+
+### Cómo Ejecutar el Proyecto
+
+1. Instalar dependencias:
+   ```
+   npm install
+   ```
+
+2. Iniciar servidor de desarrollo:
+   ```
+   npm start
+   ```
+
+3. Abrir navegador en `http://localhost:8080`
+
+## Próximos Pasos
+
+Para las siguientes etapas de desarrollo:
+
+1. **Mejoras en la Generación de Contenido**
+   - Más variedad de obstáculos y elementos interactivos
+   - Trampas y mecánicas especiales por habitación
+   - Escalado de dificultad según progresión
+
+2. **Sistema de Combate**
+   - Implementar armas y ataques
+   - Añadir enemigos básicos con comportamientos propios
+   - Sistema de daño y knockback
+
+3. **Elementos Interactivos**
+   - Cofres y recompensas
+   - Consumibles y powerups
+   - Elementos destructibles
+
+4. **Feedback Visual**
+   - Mejor diferenciación de obstáculos con sprites
+   - Partículas y efectos para interacciones
+   - Indicadores visuales para terrenos peligrosos# Documentación del Roguelike Pixel - Etapa 1
+
+## Descripción del Proyecto
+
+Roguelike Pixel es un juego de mazmorras estilo roguelike con estética pixel art inspirada en Hotline Miami. El juego se ejecuta en navegador utilizando Phaser 3 y JavaScript moderno.
+
+## Arquitectura del Proyecto
+
+El proyecto sigue una arquitectura modular con clara separación de responsabilidades:
+
+```
+roguelike-pixel/
+├── src/
+│   ├── config/       # Configuración centralizada
+│   ├── scenes/       # Escenas de Phaser
+│   ├── entities/     # Entidades del juego
+│   ├── generators/   # Generación procedural
+│   ├── ui/           # Componentes de interfaz
+│   ├── utils/        # Utilidades
+│   ├── assets/       # Recursos gráficos y sonido
+│   ├── index.html    # HTML base
+│   └── index.js      # Punto de entrada
+```
+
+## Componentes Principales
+
+### 1. Sistema de Configuración
+
+Todo parámetro ajustable está centralizado en archivos de configuración:
+
+- **gameConfig.js**: Configuración global del juego
+- **playerConfig.js**: Estadísticas y comportamiento del jugador
+- **levelConfig.js**: Generación procedural de niveles
+- **uiConfig.js**: Estilos y configuración de la interfaz
+- **enemyConfig.js**: Configuración de enemigos
 
 ### 2. Generación Procedural de Habitaciones
 
